@@ -4,9 +4,13 @@ from flask import jsonify
 import flask
 import psycopg2
 from psycopg2 import Error
+import json
+# import requests
 
 app = Flask(__name__)
-connection = psycopg2.connect("dbname=pet_hotel_python")
+# connection = psycopg2.connect(dbname="pet_hotel_python",
+#                             host="127.0.0.1",
+#                             port="5432",)
 # cursor = connection.cursor()
 
 # try:
@@ -39,8 +43,26 @@ connection = psycopg2.connect("dbname=pet_hotel_python")
 def home():
     return "<h1>Hello World!</h1><p>From Python and Flask!</p>"
 
-@app.route('/api/guests/all', methods=['GET'])
-def api_all():
+@app.route('/api/pets', methods=['GET'])
+def api_pets():
+    connection = psycopg2.connect(dbname="pet_hotel_python",
+                            host="127.0.0.1",
+                            port="5432",)
+
+    cursor = connection.cursor()
+    postgreSQL_select_Query = 'SELECT "pets".*, "owners".name AS owner FROM pets JOIN "owners" ON "pets".owner_id = "owners".id;'
+    cursor.execute(postgreSQL_select_Query)
+    # Selecting rows from mobile table using cursor.fetchall
+    # pets = cursor.fetchall()
+    response = [dict((cursor.description[i][0], value) \
+               for i, value in enumerate(row)) for row in cursor.fetchall()]
+    # respond, status 200 is added for us
+    table = jsonify(response)
+    return table
+    # return response
+
+@app.route('/api/owners', methods=['GET'])
+def api_owners():
 
     cursor = connection.cursor()
     postgreSQL_select_Query = "SELECT * FROM owners"

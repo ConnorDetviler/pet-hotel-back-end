@@ -1,11 +1,13 @@
 from flask import Flask
 from flask import request
 from flask import jsonify
+from flask import make_response
 import flask
 import psycopg2
 from psycopg2 import Error
+from psycopg2.extras import RealDictCursor
 import json
-# import requests
+
 
 app = Flask(__name__)
 # connection = psycopg2.connect(dbname="pet_hotel_python",
@@ -73,13 +75,47 @@ def api_owners():
     # respond, status 200 is added for us
     return jsonify(owners)
 
-    # for row in books:
-    #     print("Id = ", row[0], )
-    #     print("Title = ", row[1])
-    #     print("Author  = ", row[2], "\n")
+@app.route('/api/pets', methods=['POST'])
+def api_add():
+    # print(request.form)
+    name = request.get_json()['name']
+    color = request.get_json()['color']
+    breed = request.get_json()['breed']
+    check_in = request.get_json()['check_in']
+    owner_id = request.get_json()['owner_id']
+    try:
+        print('yay')
+        connection = psycopg2.connect(dbname="pet_hotel_python",
+                                host="127.0.0.1",
+                                port="5432",)
+        # Avoid getting arrays of arrays!
+        print('yay 2')
+        cursor = connection.cursor(cursor_factory=RealDictCursor)
+        print('yay 3')
+        insertQuery = "INSERT INTO pets (name, color, breed, check_in, owner_id) VALUES (%s, %s, %s, %s, %s)"
+        # if only only one param, still needs to be a tuple --> cursor.execute(insertQuery, (title,)) <-- comma matters!
+        cursor.execute(insertQuery, (name, color, breed, check_in, owner_id))
+        # really for sure commit the query
+        connection.commit()
+        count = cursor.rowcount
+        print(count, "Pet inserted")
+        # respond nicely
+        result = {'status': 'CREATED'}
+        return make_response(jsonify(result), 201)
+    except (Exception, psycopg2.Error) as error:
+        # there was a problem
+        if(connection):
+            print("Failed to insert pet", error)
+            # respond with error
+            result = {'status': 'ERROR'}
+            return make_response(jsonify(result), 500)
+    finally:
+        # closing database connection.
+        if(connection):
+            # clean up our connections
+            cursor.close()
+            connection.close()
+            print("PostgreSQL connection is closed")
 
-# if __name__ == '__main__':
-#     app.debug=True
-#     app.run()
-#change
+
 app.run()
